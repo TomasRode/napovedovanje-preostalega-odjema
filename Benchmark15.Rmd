@@ -1,0 +1,140 @@
+---
+title: "Benchmark na 15 min podatkih"
+author: "Tomas Rode"
+date: "7 4 2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidymodels)
+library(tsibble)
+library(dplyr)
+library(readr)
+library(lubridate)
+library(stats)
+library(ggplot2)
+library(plotly)
+library(timetk)
+library(modeltime)
+library(modeltime.ensemble)
+library(parsnip)
+library(forecast)
+
+
+memory.limit(size=56000)
+```
+
+OPOZORILO: TA DOKUMENT SAMO PRIKAZUJE, DA UČENJE NA SAMIH 15 MINUTNIH PODATKIH NI MOGOČE (ČE ŽELIMO PREVERJATI KOT SMO IZBRALI -- ZA CELO LETO NAZAJ), SAJ JE ENOSTAVNO PREMALO PODATKOV ZA OCENJEVANJE MODELOV
+
+## Ponovitev benchmarka na 15 minutnih podatkih
+
+Ker smo v prejšnji datoteki preizkusili modele le na urnih podatkih, se bomo zdaj osredotočili na 15 minutne frekvence. Vprašanje, ki se mi postavlja je, ali je bolje vzeti samo podatke, ki so na voljo pri iskani frekvenci, ali je morda bolje model "učiti" na večjih podatkih in prirediti rezultate na višje frekvence npr. tako, da enakomerno razdelimo odjem na manjših intervalih. 
+
+
+```{r, include=FALSE}
+data_all_15 <- read.csv('data/data_all_15min.csv') %>% 
+  mutate(DateTime = ymd_hms(datetime)) %>% distinct(DateTime, .keep_all = TRUE) %>% select(-datetime) %>%
+  as_tsibble()
+```
+
+Zdaj naredimo sezonsko dekompozicijo časovne vrste.
+
+```{r}
+data_all_15$ELCE %>% msts( seasonal.periods = c(4*24, 4*24*7, 4*24*365)) %>% mstl() %>% autoplot()
+```
+
+
+## Benchmark 1 in 2
+
+Prva modela, ki ju bomo prezkusili za napovedovanje odjema sta modela sezonske dekompozicije, kjer bomo vsako od zgornjih sezonskih komponent modelirali z dvema metodama - eksponentnim glajenjem in arima modelom.
+
+```{r}
+
+splits <- initial_time_split(data_all_15, prop = 0.9)
+
+decomp_model_ets <- seasonal_reg(
+  mode = "regression",
+  seasonal_period_1 = 4*24,
+  seasonal_period_2 = 4*7*24,
+  seasonal_period_3 = 4*365*24
+) %>% set_engine("stlm_ets") %>% fit(formula = ELCE ~ DateTime, data=training(splits))
+
+decomp_model_arima <- seasonal_reg(
+  mode = "regression",
+  seasonal_period_1 = 4*24,
+  seasonal_period_2 = 4*7*24,
+  seasonal_period_3 = 4*365*24
+) %>% set_engine("stlm_arima") %>% fit(formula = ELCE ~ DateTime, data=training(splits))
+
+models_tbl <- modeltime_table(
+    decomp_model_ets,
+    decomp_model_arima
+)
+
+
+forecast_tbl <-  models_tbl %>%
+    modeltime_forecast(new_data = testing(splits),
+                       quiet = FALSE)
+
+actual_tbl <- data_all_15 %>% tail(4*150*24) %>%
+  mutate(.model_id = 0, .model_desc = "Actual", .key = "Actual") %>%
+  rename(.index = DateTime, .value = ELCE)
+
+forecast_tbl_all <- rbind(forecast_tbl, actual_tbl)
+
+forecast_tbl_all %>%
+  plot_modeltime_forecast(.conf_interval_show = FALSE ,.interactive = TRUE)
+  
+
+```
+
+```{r}
+data_cv <- data.frame(data_all_15) %>% time_series_cv(initial = "1 year, 4 months", assess = "1 month", skip="1 month")
+```
+
+
+```{r}
+data_cv %>% plot_time_series_cv_plan(
+        DateTime, ELCE, # date variable and value variable
+        # Additional arguments passed to plot_time_series(),
+        .facet_ncol = 4,
+        .line_alpha = 0.5,
+        .interactive = FALSE
+    )
+```
+
+```{r, echo=TRUE, results='hide'}
+
+cross_validation <- models_tbl %>%
+    modeltime_fit_resamples(
+        resamples = data_cv,
+        control   = control_resamples(verbose = TRUE)
+    )
+
+```
+
+```{r}
+cross_validation %>%
+    plot_modeltime_resamples(
+      .metric_set = metric_set(mae, mape, mase, rmse),
+      .point_size  = 3, 
+      .point_alpha = 0.8,
+      .interactive = FALSE
+    )
+```
+
+```{r}
+cross_validation %>%
+    modeltime_resample_accuracy(metric_set=metric_set(mae),
+                                summary_fns = c(mean=mean, min=min, max=max)) %>%
+    table_modeltime_accuracy(.interactive = FALSE)
+```
+
+```{r}
+cross_validation %>%
+    modeltime_resample_accuracy(metric_set=metric_set(mape),
+                                summary_fns = c(mean=mean, min=min, max=max)) %>%
+    table_modeltime_accuracy(.interactive = FALSE)
+```
