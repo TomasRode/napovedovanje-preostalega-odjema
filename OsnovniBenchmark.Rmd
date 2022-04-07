@@ -50,7 +50,7 @@ Prva modela, ki ju bomo prezkusili za napovedovanje odjema sta modela sezonske d
 
 ```{r}
 
-splits <- initial_time_split(data_all_combined, prop = 0.985)
+splits <- initial_time_split(data_all_combined, prop = 0.85)
 
 decomp_model_ets <- seasonal_reg(
   mode = "regression",
@@ -76,7 +76,7 @@ forecast_tbl <-  models_tbl %>%
     modeltime_forecast(new_data = testing(splits),
                        quiet = FALSE)
 
-actual_tbl <- data_all_combined %>% tail(70*24) %>%
+actual_tbl <- data_all_combined %>% tail(1000*24) %>%
   mutate(.model_id = 0, .model_desc = "Actual", .key = "Actual") %>%
   rename(.index = DateTime, .value = ELCE)
 
