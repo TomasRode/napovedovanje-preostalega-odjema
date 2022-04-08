@@ -1,0 +1,51 @@
+---
+title: "Kratko poročilo pri napovedovanju preostalega odjema v Sloveniji z metodami strojnega učenja in slučajnimi procesi"
+author: "Tomas Rode"
+date: "8. 4. 2022"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. NAVODILO IN MOTIVACIJA
+
+Napovedovanje odjema električne energije je izjemno pomembno za delovanje elektro energetskega omrežja. Preostali odjem električne energije je odjem, ki ni merjen in predstavlja gospodinjski odjem in odjem malih poslovnih odjemalcev. Na preostali odjem električne energije vpliva več dejavnikov. Med pomembnejšimi dejavniki so tip dneva in različne vremenske spremenljivke, opazen pa je tudi vpliv obdobja epidemije zaradi COVID-19.
+
+Napovedovanje odjema, še posebej preostalega odjema, je izjemno pomembno za dobavitelje električne energije, ki morajo zaradi netočnih napovedi nositi t.i. strošek odstopanj. S ciljem zmanjševanja stroška odstopanj želimo čim bolj točne napovedi preostalega odjema. Izdelali bomo model za napovedovanje preostalega odjema za dan v naprej za obdobje vsaj enega meseca. Ker gre za problem napovedovanja časovnih vrst, bomo za napovedovanje uporabili metode strojnega učenja in metode slučajnih procesov.
+
+## 2. DOSEDANJE DELO
+
+Pri dozdajšnjem delu sem se osredotočil predvsem na podatke o preostalem odjemu in na njihovo sezonskost. V podmapi `prikazi/` so shranjeni glavni trije prikazi delovnih faz, ki sem se jih do tega trenutka uspel lotiti. 
+
+V datoteki `prikazi/predstavitev_podatkov.html` je shranjen prikaz uvoza, predstavitve in shranjevana podatkov o preostalem odjemu Elektro Celje. Glavni poudarki tega dela so:
+
+- odprava anomalij v podatkih,
+- ustrezno "ponovno vzorčenje" (resampling) podatkov na želeno granulacijo -- tako da dobimo 15-minutne in urne podatke v posameznih časovnih vrstah,
+- interpolacija urnih podatkov na 15-minutno raven za namene modeliranja,
+- prikaz časovnih vrst,
+- prikaz glavnih avtokorelacij (lastnosti sezonskosti na dnevni, tedenski in letni ravni) in
+- shranjevanje očiščenih in urejenih podatkov.
+
+V datoteki `prikazi/OsnovniBenchmark.html` je shranjen prikaz prvega osnovnega modeliranja urnih preostalih odjemov. Glavni poudarki tega dela so:
+
+- dekompozicija urnih odjemova na trend in sezonske komponente,
+- modeliranje sezonskih komponent z eksponentnim glajenjem in arima modeloma,
+- izris osnovne napovedi za ta modela in
+- ocenjevanje napovedi modelov na podlagi križnega preverjanja na časovnih vrstah.
+
+V tej datoteki sem se osredotočil na delo z urnimi podatki, saj so ti na voljo za najdaljše časovno obdobje. Ker pa želimo, da model napoveduje 15-minutni odjem, sem moral ta osnovni model prirediti. Delo na samih 15-minutnih podatkih za te osnovne modele ni mogoče, ker imamo letno sezonskost in potrebujemo vsaj dve polni leti, da lahko določimo ustrezne koeficiente. To pa ni mogoče, če želimo napovedi modela preveriti na dvanajst zaporednih mesecih.(Neuspeli poizkus takega modeliranja najdemo v datoteki `Benchmark15.Rmd`.)
+
+V datoteki `prikazi/Benchmark60to15.html` ponovim rezultate urnega modeliranja, pri čemer namesto urnih podatkih vzamem 15-minutne kadar so na voljo in interpolirane 60-minutne na 15-minutno raven, kadar dejanski podatki na finejši granulaciji niso na voljo.
+
+## 3. NAČRT NADALJNEGA DELA
+
+Glavnina nadaljnega dela bo v izdelavi napovedi, ki so boljpe od osnovnega modela. Pri tem bom v modele vključil podatke o vremenu, COVID-19, delovnih in nedelovnih dneh itd. Vključitev vremenskih podatkov bo z vidika modeliranja nekoliko zahtevnejša, saj bom moral biti previden da vključim le informacije, ki so na voljo v trenutku izdelave napovedi. Glede rešitve tega izziva se bom posvetoval z mentorjem. Sicer nameravam tudi preizkusiti katerega od modelov strojnega učenja na časovnih vrstah, kjer bom uporabil enake podatke kot pri osnovnem modelu. Vse modele bom primerjal glede na enako metodo križnega preverjanja na časovnih vrstah (rolling window metoda). Načrt sosledja nadaljnih nalog je torej takšno:
+
+- pridobitev dodatnih podatkov, rešitev "informacijskega" problema.
+- izdelava podrobnejših modelov (temelečih na regresiji),
+- izdelava modelov s pomočjo strojnega učenja ter
+- končna izbira modela in napoved.
+
