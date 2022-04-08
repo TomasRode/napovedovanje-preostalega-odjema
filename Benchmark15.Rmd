@@ -32,6 +32,8 @@ OPOZORILO: TA DOKUMENT SAMO PRIKAZUJE, DA UČENJE NA SAMIH 15 MINUTNIH PODATKIH 
 
 Ker smo v prejšnji datoteki preizkusili modele le na urnih podatkih, se bomo zdaj osredotočili na 15 minutne frekvence. Vprašanje, ki se mi postavlja je, ali je bolje vzeti samo podatke, ki so na voljo pri iskani frekvenci, ali je morda bolje model "učiti" na večjih podatkih in prirediti rezultate na višje frekvence npr. tako, da enakomerno razdelimo odjem na manjših intervalih. 
 
+Tukaj preizkušam model na samih 15minutnih podatkih.
+
 
 ```{r, include=FALSE}
 data_all_15 <- read.csv('data/data_all_15min.csv') %>% 
